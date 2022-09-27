@@ -10,15 +10,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 import scipy.ndimage as sci
-# from skimage.filters import threshold_otsu, rank, threshold_minimum, difference_of_gaussians, threshold_local, \
-#     threshold_mean
-# import skimage.exposure as exposure
-# from skimage.morphology import disk
-# from skimage.util import img_as_ubyte
+import rasterio 
 from copy import deepcopy
 from PIL import Image
 from PIL.TiffTags import TAGS
-import rasterio 
 
 sh_mes = 3.6
 NEAR_FACTOR = 10
@@ -32,16 +27,15 @@ def analyis(file):
     img = Image.open(os.path.join(os.getcwd(),file))
     a = np.average(img)
     e = np.array(img)
-    plt.imsave('ggg1.bmp', e, cmap='gray')
+    # plt.imsave('ggg1.bmp', e, cmap='gray')
     e1 = copy.copy(e)
 
     # thresholding
     f = copy.copy(e)
     b = np.histogram(f, np.linspace(np.min(f), np.max(f), 256))
-    plt.plot(b[1][:255],b[0])
-    plt.show()
 
-    water_tmp = (np.sum(b[0][HALF:]*b[1][HALF+1:]) / np.sum(b[0][HALF:]))
+    water_tmp = (np.sum(b[0][HALF:]*b[1][HALF+1:]) / np.sum(b[0][HALF:])) #two options for measuring water tmp, average or median, average was better 
+    #water_tmp = b[1][HALF + 1 + np.argmax(b[0][HALF+1:])]  
 
     thresh = b[1][0] + 0.8 * (b[1][np.argmax(b[0])] - b[1][0])
 
@@ -59,19 +53,11 @@ def analyis(file):
     g = 255 * (g - np.min(g)) / (np.max(g) - np.min(g))
     g[bin_img == 255] = 255
 
-    # plt.imsave('ggg2.bmp', g, cmap='gray')
-
-    # generate three channel image data, add threshold on top
     y = e1[:, :, np.newaxis]
     y = np.dstack((y, y, y))
     y1 = 255 * (y - np.min(y)) / (np.max(y) - np.min(y))
     y1 = y1.astype(np.uint8)
-
-    g2 = np.where(bin_img == 0)
-    plt.imshow(e, cmap='gray')
-
     y1[:, :, 1] = g
-    plt.imsave('ggg3.bmp', y1, cmap='gray')
 
     # pixl groups labeling
 
@@ -94,10 +80,6 @@ def analyis(file):
         array_size[i] = np.count_nonzero(labeled_array == i)
         array_location_mean[i] = np.int32(np.round(np.mean(np.where(labeled_array == i), axis=1)))
 
-    array_size_hist = np.histogram(array_size, bins=np.arange(0, 50, 2))
-
-    plt.figure()
-    plt.hist(array_size, bins=np.arange(0, 50, 2))
 
     is_crane = np.ones(num_features + 1)
     is_crane[0] = 0
@@ -110,7 +92,7 @@ def analyis(file):
     for i in range(1, num_features + 1):
         #  distance from all points of land
         g4 = np.linalg.norm(array_location_mean[i].reshape((2, 1)) - np.where(labeled_array == land_i), axis=0)
-        if np.min(g4) < 10 and has_shore: 
+        if np.min(g4) < 50 and has_shore: 
             is_crane[i] = 0
 
         if array_size[i] < thresh:  # too small >> not a crane
@@ -134,14 +116,6 @@ def analyis(file):
 
     ave_crane_neighbor = np.mean(crane_neighbor)
 
-    # g7 = copy.copy(y1)
-
-    # for crane in range(crane_location.shape[0]):
-    #     g7[crane_location[crane][0]][crane_location[crane][1], :] = [255, 0, 0]
-
-    # plt.imsave('ggg5.bmp', g7, cmap='gray')
-
-    #crane = 26
     neighbors = {str(crane) : ([],0) for crane in range(len(crane_location))}
 
     g99 = deepcopy(y1)
@@ -176,20 +150,16 @@ def analyis(file):
         neighbors[str(crane)] = (crane_neig_dist_real, (np.linalg.norm(crane_neig_dist) / len(crane_neig_dist))) #TODO bug 
 
         if (crane == 0):
-            # g99 = deepcopy(y1)
+            g99 = deepcopy(y1)
             s_list = [i for i in range (len(crane_location)) if (crane_location_tuple[i] in crane_neig_dist_real_tuple)]
-
-            # for crane_neig in s_list: #all cranes neighbor
-            #     g99[crane_location[crane_neig][0]][crane_location[crane_neig][1], :] = [255, 0, 0]
-
-            # g99[crane_location[crane][0]][crane_location[crane][1], :] = [0, 0, 0]
-            # plt.imsave('ggg79.bmp', g99, cmap='gray')
 
     neighbor_distances = [neighbors[str(i)][NEIGH_DISTANCE] for i in range(len(neighbors))]
     avg_of_avgs = np.mean(neighbor_distances)
 
     # find cranes closest to shore
     shore_history = []
+    shore_cranes_sus = dict()
+
     if has_shore :
         close_to_shore = np.ones(len(crane_location), dtype=int)
         shore_dist = np.zeros(len(crane_location))
@@ -211,22 +181,36 @@ def analyis(file):
                 deg = (180 / np.pi) * np.arccos(( - (a_nor ** 2) + (ab_nor ** 2) + (b_nor ** 2))
                         / (ab_nor * b_nor * 2 ))  #cosine theorem
 
-                if deg < 70 : #  has neighbor closer to shore 
+                if deg < 45 : #  has neighbor closer to shore 
                     close_to_shore[crane] = 0 
                     break
                 shore_dist[crane] = b_nor 
-        
+            if close_to_shore[crane] :
+                shore_cranes_sus[crane] = crane_shore_dist
+
+        tmp_dict = deepcopy(shore_cranes_sus)
+
+        for crane in shore_cranes_sus:
+            tmp_crane = tmp_dict.pop(crane) 
+
+            for crane_2 in tmp_dict:
+                ab_nor = np.linalg.norm(crane_location[crane_2] - crane_location[crane])
+                b_nor = np.linalg.norm(shore_cranes_sus[crane])
+                a_nor = np.linalg.norm(crane_location[crane_2] - crane_location[crane]- shore_cranes_sus[crane])
+                deg = (180 / np.pi) * np.arccos(( - (a_nor ** 2) + (ab_nor ** 2) + (b_nor ** 2))
+                        / (ab_nor * b_nor * 2 ))  #cosine theorem
+
+                if deg < 35 : #  has neighbor closer to shore 
+                    close_to_shore[crane] = 0 
+                    break
+
+            tmp_dict.update({crane : tmp_crane})        
+
         for i in range (len(crane_location)) : 
             if close_to_shore[i] :
                 g99[crane_location[i][0]][crane_location[i][1]] = [0, 0, 0] 
                 shore_history.append(shore_dist[i])
             g99[Shore_point_coor[0]][Shore_point_coor[1], :] = [255,0,0]
         plt.imsave('ggg19.bmp', g99, cmap='gray')
-        counts, bins = np.histogram(shore_history, bins=12)
-        plt.stairs(counts, bins, fill=True)
-        plt.show()
-
-    print('e')
 
     return avg_of_avgs, shore_history, water_tmp
-    # meta_dict = {TAGS[key] : img.tag[key] for key in img.tag_v2}

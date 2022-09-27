@@ -1,8 +1,7 @@
 import os
-from re import sub
 import geopandas as gpd
 import utm
-from pyproj import Proj
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np 
 from sklearn.cluster import KMeans
@@ -11,7 +10,7 @@ import project_h as azr
 def clustering (features, centroids):
     clusters = KMeans(
                     init=centroids,
-                    n_clusters=3,
+                    n_clusters=len(centroids),
                     n_init=1,
                     max_iter=300,
                     random_state=42
@@ -53,9 +52,14 @@ for (root,dirs,files) in os.walk('Agurim', topdown=True):
                             shore_history += shore_bi
                         else : 
                             table.drop(f, inplace=True)
+                    
                     print("this is branch", branch)
                     print(sub_dirs)
                     #print(tif_files)
+                plt.figure()
+                plt.hist(shore_history, bins=17)
+                plt.pause(1)
+                plt.show()
                 print(table)    
         #print (files)
         print ('--------------------------------')
