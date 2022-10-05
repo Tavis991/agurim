@@ -51,8 +51,8 @@ for (root,dirs,files) in os.walk('Agurim', topdown=True):
                             img = os.path.join(root, dyr, f)
                             Average_distance_to_neighbors, Average_std, shore_bi, Water_temperature = azr.analyis(img)
                             table.loc[f, 'Average_distance_to_neighbors'], table.loc[f, 'Water_temperature'] \
-                                = Average_distance_to_neighbors, Water_temperature
-                            table.loc[f, 'Average_distance_STD'] = Average_std
+                                = Average_distance_to_neighbors.round(3), Water_temperature.round(3)
+                            table.loc[f, 'Average_distance_STD'] = Average_std.round(3)
                             shore_history[table.loc[f,'Cluster']] += shore_bi
                         else : 
                             table.drop(f, inplace=True)
@@ -76,6 +76,8 @@ for (root,dirs,files) in os.walk('Agurim', topdown=True):
                         plt.pause(1)
                         plt.show()
 
+                table = table.round(3)
+                pd.options.display.float_format = "{:,.3f}".format
                 print(table) 
                 table.to_excel('Final_results.xlsx')   
         #print (files)
