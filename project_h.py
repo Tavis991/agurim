@@ -28,6 +28,7 @@ NEIGHBORS_ANGLE = 30
 SHORE_NEIGHBORES_ANGLE = 45
 SHORE_NEAREST_ANGLE = 35 
 
+
 def analyis(file):
     img = Image.open(os.path.join(os.getcwd(),file))
     a = np.average(img)
@@ -100,6 +101,7 @@ def analyis(file):
     for i in range(1, num_features + 1):
         #  distance from all points of land
         g4 = np.linalg.norm(array_location_mean[i].reshape((2, 1)) - np.where(labeled_array == land_i), axis=0)
+
         if np.min(g4) < SHORE_DISTANCE_TOLERANCE and has_shore:  # 'islands' or water plants
             is_crane[i] = 0
 
