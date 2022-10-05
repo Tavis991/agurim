@@ -13,3 +13,8 @@ comments are written where neccessary.
 commented are also debug prints (photos actually), which i have left to be activated to produce any step of the algorithm along the way.
 
 in project_h there are several hard-coded global params (FACTORS), feel free to play them as you like and observe results. 
+
+instruction: 
+place files in directory containing an 'Agurim' (name does not matter) folder,
+with its subfolders - legs, pix4d ('pix' does matter) and flight_data.csv (.csv is a must) 
+press 'play' in main analysis. 
