@@ -23,6 +23,10 @@ SHORE_DISTANCE = 2
 SHORE_TOLERANCE = 2500
 HALF = 128
 CRANE_SIZE_THRESH = 16
+SHORE_DISTANCE_TOLERANCE = 50
+NEIGHBORS_ANGLE = 30 
+SHORE_NEIGHBORES_ANGLE = 45
+SHORE_NEAREST_ANGLE = 35 
 
 def analyis(file):
     img = Image.open(os.path.join(os.getcwd(),file))
@@ -96,7 +100,7 @@ def analyis(file):
     for i in range(1, num_features + 1):
         #  distance from all points of land
         g4 = np.linalg.norm(array_location_mean[i].reshape((2, 1)) - np.where(labeled_array == land_i), axis=0)
-        if np.min(g4) < 50 and has_shore:  # 'islands' or water plants
+        if np.min(g4) < SHORE_DISTANCE_TOLERANCE and has_shore:  # 'islands' or water plants
             is_crane[i] = 0
 
         if array_size[i] < CRANE_SIZE_THRESH:  
@@ -148,7 +152,7 @@ def analyis(file):
                 deg = (180 / np.pi) * np.arccos(( - (ab_nor ** 2) + (a_nor ** 2) + (b_nor ** 2))
                         / (a_nor * b_nor * 2 ))  #cosine therom
 
-                if deg < 30 :  
+                if deg < NEIGHBORS_ANGLE :  
                     if ab_nor < NEAR_FACTOR :  
                         pass
                     elif tuple(max_cr) in crane_neig_dist_real_tup:
@@ -197,7 +201,7 @@ def analyis(file):
                 deg = (180 / np.pi) * np.arccos(( - (a_nor ** 2) + (ab_nor ** 2) + (b_nor ** 2))
                         / (ab_nor * b_nor * 2 ))  #cosine theorem
 
-                if deg < 45 : #  has neighbor closer to shore 
+                if deg < SHORE_NEIGHBORES_ANGLE : #  has neighbor closer to shore 
                     close_to_shore[crane] = 0 
                     break
                 shore_dist[crane] = b_nor 
@@ -218,7 +222,7 @@ def analyis(file):
                 deg = (180 / np.pi) * np.arccos(( - (a_nor ** 2) + (ab_nor ** 2) + (b_nor ** 2))
                         / (ab_nor * b_nor * 2 ))  #cosine theorem
 
-                if deg < 35 : #  has neighbor closer to shore 
+                if deg < SHORE_NEAREST_ANGLE : #  has neighbor closer to shore 
                     close_to_shore[crane] = 0 
                     break
 
