@@ -63,18 +63,18 @@ for (root,dirs,files) in os.walk('Agurim', topdown=True):
                         b = np.histogram(shore_history[cluster], np.linspace(np.min(shore_history[cluster]), np.max(shore_history[cluster]), 20))
                         y = 100 * b[0] / np.sum(b[0])
                         plt.bar(b[1][:-1], y, width=8, color='blue')
-                        plt.xlabel("Distance to shore")
+                        plt.xlabel("Distance to shore (cm)")
                         plt.ylabel("Crane precentage")
                         plt.title(f"Histogram of shore distance for cluster {cluster}")
                         plt.pause(1)
-                        plt.show()
+                        plt.savefig(f"shore_distance_histogram_cluster_{cluster}.png", dpi=300, bbox_inches='tight' )
                     else :
                         plt.plot(0,0)
                         plt.xlabel("Distance to shore")
                         plt.ylabel("Crane precentage")
                         plt.title(f"No photographed cranes on shoreline for cluster {cluster}")
                         plt.pause(1)
-                        plt.show()
+                        plt.savefig(f"shore_distance_histogram_cluster_{cluster}.png", dpi=300, bbox_inches='tight')
 
                 table = table.round(3)
                 pd.options.display.float_format = "{:,.3f}".format

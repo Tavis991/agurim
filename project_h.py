@@ -27,6 +27,7 @@ SHORE_DISTANCE_TOLERANCE = 50
 NEIGHBORS_ANGLE = 30 
 SHORE_NEIGHBORES_ANGLE = 45
 SHORE_NEAREST_ANGLE = 35 
+CM_TO_PXL = 6.91 
 
 def analyis(file):
     img = Image.open(os.path.join(os.getcwd(),file))
@@ -231,11 +232,11 @@ def analyis(file):
         for i in range (len(crane_location)) : 
             if close_to_shore[i] :
                 # g99[crane_location[i][0]][crane_location[i][1]] = [0, 0, 0] 
-                shore_history.append(shore_dist[i])
+                shore_history.append(shore_dist[i] * CM_TO_PXL)
         #     g99[Shore_point_coor[0]][Shore_point_coor[1], :] = [255,0,0]
         # plt.imsave('pic_shore_cranes_final_iteration.bmp', g99, cmap='gray')
 
-    return avg_of_avgs, std_of_avgs, shore_history, water_tmp
+    return avg_of_avgs*CM_TO_PXL, std_of_avgs*CM_TO_PXL, shore_history, water_tmp
 
 if __name__ == '__main__':
   analyis('Rec-201220_agamon_flir_100m-349_11_38_44_688_2418.tif')
