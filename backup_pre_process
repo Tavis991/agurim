@@ -1,0 +1,83 @@
+import tensorflow as tf
+from keras import layers, optimizers
+import matplotlib.pyplot as plt
+from keras.models import Sequential
+from keras.preprocessing.image import ImageDataGenerator
+from PIL import Image
+import os
+
+TIF_WIDE = 480
+TIF_HIGH = 640
+BATCH_SHAPE = 256
+class_names = ['cranes', 'no_crane']
+def plotImages(images_arr, labels_arr):
+    fig, axes = plt.subplots(1, 5, figsize=(20,20))
+    axes = axes.flatten()
+    i = 0
+    for img, ax in zip(images_arr, axes):
+        ax.imshow(img)
+        ax.axis('off')
+        ax.set_title(class_names[int(sample_training_labels[i])])
+        i += 1
+
+    plt.tight_layout()
+    plt.pause(1)
+    plt.show() 
+
+datagen = ImageDataGenerator()
+train_generator = datagen.flow_from_directory('CNN_data/train/', 
+    class_mode='binary',
+    batch_size=32,
+    color_mode="grayscale",
+    target_size=(TIF_WIDE, TIF_HIGH),
+    seed=140,
+    shuffle=True,)
+validate_generator = datagen.flow_from_directory('CNN_data/validate/',   
+    class_mode='binary',
+    batch_size=32,
+    color_mode="grayscale",
+    target_size=(TIF_WIDE, TIF_HIGH),
+    seed=10,
+    shuffle=True,)
+test_generator = datagen.flow_from_directory('CNN_data/test/',   
+    class_mode='binary',
+    batch_size=32,
+    color_mode="grayscale",
+    target_size=(TIF_WIDE, TIF_HIGH),
+    seed=40,
+    shuffle=True,)
+
+sample_training_images, sample_training_labels = train_generator.next()
+print('Batch shape=%s, min=%.3f, max=%.3f' % (sample_training_images.shape, \
+    sample_training_images.min(), sample_training_images.max()))
+plotImages(sample_training_images, sample_training_labels)
+
+model = tf.keras.models.Sequential([
+tf.keras.layers.Conv2D(16, kernel_size=5, activation='relu', input_shape=(TIF_WIDE, TIF_HIGH, 1)),
+tf.keras.layers.MaxPooling2D(pool_size = 2, padding='VALID'),
+tf.keras.layers.Conv2D(32, kernel_size=3, activation='relu'),
+tf.keras.layers.MaxPooling2D(pool_size = 2, padding='VALID'),
+tf.keras.layers.Conv2D(64, kernel_size=3, activation='relu'),
+tf.keras.layers.MaxPooling2D(pool_size = 2, padding='VALID'),
+tf.keras.layers.Conv2D(64, kernel_size=3, activation='relu'),
+tf.keras.layers.MaxPooling2D(pool_size = 2, padding='VALID'),
+tf.keras.layers.Conv2D(64, kernel_size=3, activation='relu'),
+tf.keras.layers.MaxPooling2D(pool_size = 2, padding='VALID'),
+tf.keras.layers.Flatten(),
+tf.keras.layers.Dense(512, activation='relu'),
+tf.keras.layers.Dense(1, activation='sigmoid')])
+
+model.summary()
+
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+hist = model.fit_generator(
+    train_generator,
+    steps_per_epoch=8,
+    epochs = 5,
+    validation_data=validate_generator,
+    validation_steps=2
+)
+model.evaluate(train_generator)
+model.evaluate(validate_generator)
+print('1')
