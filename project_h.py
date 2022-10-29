@@ -31,12 +31,10 @@ CM_TO_PXL = 6.91
 THRESHOLDS = {'201220' : dict(), '030321': dict(), '081121': dict(), '131221': dict(), '231120': dict()}
 THRESHOLDS['201220']['thresh_tmp'] = 'f < b[1][0] + 0.8 * (b[1][np.argmax(b[0])] - b[1][0])'
 THRESHOLDS['201220']['CRANE_SIZE_THRESH'] = 16
-THRESHOLDS['131221']['thresh_tmp'] = 'f > b[1][0] + 1.4 * (b[1][np.argmax(b[0])] - b[1][0])'
-THRESHOLDS['131221']['CRANE_SIZE_THRESH'] = 5
-THRESHOLDS['030321']['thresh_tmp'] = 'f < b[1][0] + 0.9 * (b[1][np.argmax(b[0])] - b[1][0])'
-THRESHOLDS['030321']['CRANE_SIZE_THRESH'] = 11
-THRESHOLDS['081121']['thresh_tmp'] = 'f < b[1][0] + 0.9 * (b[1][np.argmax(b[0])] - b[1][0])'
-THRESHOLDS['081121']['CRANE_SIZE_THRESH'] = 12
+THRESHOLDS['030321']['thresh_tmp'] = 'f < b[1][0] + 0.82 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['030321']['CRANE_SIZE_THRESH'] = 8
+THRESHOLDS['081121']['thresh_tmp'] = 'f < b[1][0] + 0.68 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['081121']['CRANE_SIZE_THRESH'] = 7
 THRESHOLDS['231120']['thresh_tmp'] = 'f < b[1][0] + 0.66 * (b[1][np.argmax(b[0])] - b[1][0])'
 THRESHOLDS['231120']['CRANE_SIZE_THRESH'] = 9
 
@@ -52,6 +50,7 @@ def analyis(file):
     e = np.array(img)
     e1 = copy.copy(e)
 
+    plt.imsave('pic_og.bmp', e1, cmap='gray')
     # thresholding
     f = copy.copy(e)
     b = np.histogram(f, np.linspace(np.min(f), np.max(f), 256))
@@ -60,12 +59,12 @@ def analyis(file):
     water_tmp_median = b[1][1 + np.argmax(b[0][+1:])] 
     print(water_tmp) 
     print(water_tmp_median)
-    plt.plot(b[1][:-1], b[0]) #plot bi model distributions 
-    plt.pause(1)
+    # plt.plot(b[1][:-1], b[0]) #plot bi model distributions 
+    # plt.pause(1)
     # plt.plot(b[1],(water_tmp_median,0) , "x")
-    plt.text(water_tmp_median*(0.95), 2000, f'water temp median = {water_tmp_median:.2f}', fontsize=10)
-    plt.text(water_tmp-1, 2000, f'water temp avg = {water_tmp:.2f}', fontsize=10)
-    plt.show()
+    # plt.text(water_tmp_median*(0.95), 2000, f'water temp median = {water_tmp_median:.2f}', fontsize=10)
+    # plt.text(water_tmp-1, 2000, f'water temp avg = {water_tmp:.2f}', fontsize=10)
+    # plt.show()
 
     bin_img = eval(THRESHOLD['thresh_tmp'])
     bin_img = bin_img.astype(np.int32) * 255
@@ -120,7 +119,7 @@ def analyis(file):
             is_crane[i] = 0
 
 
-        if array_size[i] < THRESHOLD['CRANE_SIZE_THRESH']:  
+        if array_size[i] < THRESHOLD['CRANE_SIZE_THRESH'] or array_size[i] > THRESHOLD['CRANE_SIZE_THRESH'] * 10:  
             is_crane[i] = 0
 
     crane_location = array_location_mean[np.where(is_crane == 1)]
@@ -262,7 +261,7 @@ def analyis(file):
     print(shore_history)
     print(avg_of_avgs*CM_TO_PXL)
     
-    return avg_of_avgs*CM_TO_PXL, std_of_avgs*CM_TO_PXL, shore_history, water_tmp
+    return avg_of_avgs*CM_TO_PXL, std_of_avgs*CM_TO_PXL, shore_history, water_tmp_median
 
 if __name__ == '__main__':
-  analyis('Rec-231120_agamon_flir_100m-328_19_56_10_231_14446.tif')
+  analyis('Rec-030321_agamon_flir_100m-349_23_26_13_659_7335.tif')
