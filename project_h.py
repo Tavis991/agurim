@@ -50,7 +50,7 @@ def analyis(file):
     e = np.array(img)
     e1 = copy.copy(e)
 
-    plt.imsave('pic_og.bmp', e1, cmap='gray')
+    # plt.imsave('pic_og.bmp', e1, cmap='gray')
     # thresholding
     f = copy.copy(e)
     b = np.histogram(f, np.linspace(np.min(f), np.max(f), 256))
@@ -68,7 +68,7 @@ def analyis(file):
 
     bin_img = eval(THRESHOLD['thresh_tmp'])
     bin_img = bin_img.astype(np.int32) * 255
-    plt.imsave('pic_binary_img.bmp', bin_img, cmap='gray')
+    # plt.imsave('pic_binary_img.bmp', bin_img, cmap='gray')
 
     # theshold output overlay on original figure
 
@@ -95,7 +95,7 @@ def analyis(file):
         [1, 1, 1]]
 
     labeled_array, num_features = sci.measurements.label(f1, structure=s)
-    plt.imsave('pic_labelled_features.bmp', labeled_array)
+    # plt.imsave('pic_labelled_features.bmp', labeled_array)
 
     array_size = np.zeros(num_features + 1)
     array_location_mean = np.int32(np.zeros((num_features + 1, 2)))
@@ -128,7 +128,7 @@ def analyis(file):
     for crane in range(crane_location.shape[0]):
         g7[crane_location[crane][0]][crane_location[crane][1], :] = [255, 0, 0]
 
-    plt.imsave('pic_crane_locations_tagged.bmp', g7, cmap='gray')
+    # plt.imsave('pic_crane_locations_tagged.bmp', g7, cmap='gray')
 
     min_crane_dist = []
     crane_neighbor = []
@@ -256,10 +256,10 @@ def analyis(file):
                 g99[crane_location[i][0]][crane_location[i][1]] = [255, 0, 0] 
                 shore_history.append(shore_dist[i] * CM_TO_PXL)
             g99[Shore_point_coor[0]][Shore_point_coor[1], :] = [255,0,0]
-        plt.imsave('pic_shore_cranes_final_iteration.bmp', g99, cmap='gray')
+        # plt.imsave('pic_shore_cranes_final_iteration.bmp', g99, cmap='gray')
 
-    print(shore_history)
-    print(avg_of_avgs*CM_TO_PXL)
+    # print(shore_history)
+    # print(avg_of_avgs*CM_TO_PXL)
     
     return avg_of_avgs*CM_TO_PXL, std_of_avgs*CM_TO_PXL, shore_history, water_tmp_median
 
