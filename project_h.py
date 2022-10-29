@@ -27,17 +27,43 @@ NEIGH_DISTANCE = 1
 SHORE_DISTANCE = 2 
 HALF = 128
 
-a = np.average(img)
+THRESHOLDS = {'201220' : dict(), '030321': dict(), '081121': dict(), '131221': dict(), '231120': dict()}
+THRESHOLDS['201220']['thresh_tmp'] = 'f < b[1][0] + 0.8 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['201220']['CRANE_SIZE_THRESH'] = 16
+THRESHOLDS['030321']['thresh_tmp'] = 'f < b[1][0] + 0.82 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['030321']['CRANE_SIZE_THRESH'] = 8
+THRESHOLDS['081121']['thresh_tmp'] = 'f < b[1][0] + 0.68 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['081121']['CRANE_SIZE_THRESH'] = 7
+THRESHOLDS['231120']['thresh_tmp'] = 'f < b[1][0] + 0.66 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['231120']['CRANE_SIZE_THRESH'] = 9
 
-e = np.array(img)
-plt.imsave('ggg1.bmp', e, cmap='gray')
-e1 = copy.copy(e)
+THRESHOLD = None
 
-# thresholding
-f = copy.copy(e)
-b = np.histogram(f, np.linspace(np.min(f), np.max(f), 256))
-plt.plot(b[1][:255],b[0])
-plt.show()
+
+def analyis(file):
+    for thresh in THRESHOLDS: 
+        if thresh in file :
+            THRESHOLD = THRESHOLDS[thresh]    
+    img = Image.open(os.path.join(os.getcwd(),file))
+    a = np.average(img)
+    e = np.array(img)
+    e1 = copy.copy(e)
+
+    plt.imsave('pic_og.bmp', e1, cmap='gray')
+    # thresholding
+    f = copy.copy(e)
+    b = np.histogram(f, np.linspace(np.min(f), np.max(f), 256))
+ 
+    water_tmp = (np.sum(b[0][:]*b[1][+1:]) / np.sum(b[0][:])) #two options for measuring water tmp, average or median, average was better 
+    water_tmp_median = b[1][1 + np.argmax(b[0][+1:])] 
+    print(water_tmp) 
+    print(water_tmp_median)
+    # plt.plot(b[1][:-1], b[0]) #plot bi model distributions 
+    # plt.pause(1)
+    # plt.plot(b[1],(water_tmp_median,0) , "x")
+    # plt.text(water_tmp_median*(0.95), 2000, f'water temp median = {water_tmp_median:.2f}', fontsize=10)
+    # plt.text(water_tmp-1, 2000, f'water temp avg = {water_tmp:.2f}', fontsize=10)
+    # plt.show()
 
 water_tmp = (np.sum(b[0][HALF:]*b[1][HALF+1:]) / np.sum(b[0][HALF:]))
 
@@ -115,9 +141,8 @@ for i in range(1, num_features + 1):
 
     # np.argmin(g4) #  closest point in land to array_location_mean[i]
 
-    if array_size[i] < thresh:  # too small >> not a crane
-        is_crane[i] = 0
-        # ToDo: remove index from array_location_mean and array_size
+        if array_size[i] < THRESHOLD['CRANE_SIZE_THRESH'] or array_size[i] > THRESHOLD['CRANE_SIZE_THRESH'] * 10:  
+            is_crane[i] = 0
 
 crane_location = array_location_mean[np.where(is_crane == 1)]
 
@@ -231,6 +256,10 @@ plt.show()
 
 # plt.imshow(e)
 
-# from PIL.TiffTags import TAGS
+    print(shore_history)
+    print(avg_of_avgs*CM_TO_PXL)
+    
+    return avg_of_avgs*CM_TO_PXL, std_of_avgs*CM_TO_PXL, shore_history, water_tmp_median
 
-# meta_dict = {TAGS[key] : img.tag[key] for key in img.tag_v2}
+if __name__ == '__main__':
+  analyis('Rec-030321_agamon_flir_100m-349_23_26_13_659_7335.tif')
