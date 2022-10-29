@@ -89,7 +89,7 @@ for dyr in os.listdir('Agurim'):
             plt.ylabel("Crane precentage")
             plt.title(f"Histogram of shore distance for cluster {cluster} date {dyr}")
             # plt.pause(1)
-            plt.savefig(f"Agurim/{dyr}/shore_distance_histogram_cluster_{cluster} date {dyr}.png", dpi=300, bbox_inches='tight' )
+            plt.savefig(f"Agurim/{dyr}/shore_distance_histogram_date_{dyr}_cluster_{cluster}.png", dpi=300, bbox_inches='tight' )
         
         else :
             plt.plot(0,0)

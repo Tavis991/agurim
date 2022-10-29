@@ -33,7 +33,11 @@ THRESHOLDS['201220']['thresh_tmp'] = 'f < b[1][0] + 0.8 * (b[1][np.argmax(b[0])]
 THRESHOLDS['201220']['CRANE_SIZE_THRESH'] = 16
 THRESHOLDS['030321']['thresh_tmp'] = 'f < b[1][0] + 0.82 * (b[1][np.argmax(b[0])] - b[1][0])'
 THRESHOLDS['030321']['CRANE_SIZE_THRESH'] = 8
-THRESHOLDS['081121']['thresh_tmp'] = 'f < b[1][0] + 0.68 * (b[1][np.argmax(b[0])] - b[1][0])'
+# THRESHOLDS['131221']['thresh_tmp'] = ['f > b[1][0] + 1.4 * (b[1][np.argmax(b[0])] - b[1][0])', \
+#     'f > b[1][0] + 1.1 * (b[1][np.argmax(b[0])] - b[1][0])'] 
+THRESHOLDS['131221']['CRANE_SIZE_THRESH'] = 5
+THRESHOLDS['081121']['thresh_tmp'] = ['f < b[1][0] + 0.60 * (b[1][np.argmax(b[0])] - b[1][0])', \
+    'f1 < b[1][0] + 0.72 * (b[1][np.argmax(b[0])] - b[1][0])']
 THRESHOLDS['081121']['CRANE_SIZE_THRESH'] = 7
 THRESHOLDS['231120']['thresh_tmp'] = 'f < b[1][0] + 0.66 * (b[1][np.argmax(b[0])] - b[1][0])'
 THRESHOLDS['231120']['CRANE_SIZE_THRESH'] = 9
@@ -53,6 +57,7 @@ def analyis(file):
     plt.imsave('pic_og.bmp', e1, cmap='gray')
     # thresholding
     f = copy.copy(e)
+    f1 = copy.copy(e)
     b = np.histogram(f, np.linspace(np.min(f), np.max(f), 256))
  
     water_tmp = (np.sum(b[0][:]*b[1][+1:]) / np.sum(b[0][:])) #two options for measuring water tmp, average or median, average was better 
@@ -65,8 +70,13 @@ def analyis(file):
     # plt.text(water_tmp_median*(0.95), 2000, f'water temp median = {water_tmp_median:.2f}', fontsize=10)
     # plt.text(water_tmp-1, 2000, f'water temp avg = {water_tmp:.2f}', fontsize=10)
     # plt.show()
-
-    bin_img = eval(THRESHOLD['thresh_tmp'])
+    bins = []
+    for i in range (len(THRESHOLD['thresh_tmp'])):
+        bins.append(eval(THRESHOLD['thresh_tmp'][i]))
+        plt.imsave(f'pic_binary_img{i}.bmp', bins[i], cmap='gray')
+    bin_img = np.ones(e.shape)
+    for b in bins : 
+        bin_img = np.logical_and(bin_img, b)
     bin_img = bin_img.astype(np.int32) * 255
     plt.imsave('pic_binary_img.bmp', bin_img, cmap='gray')
 
@@ -104,7 +114,6 @@ def analyis(file):
         array_size[i] = np.count_nonzero(labeled_array == i)
         array_location_mean[i] = np.int32(np.round(np.mean(np.where(labeled_array == i), axis=1)))
 
-
     is_crane = np.ones(num_features + 1)
     is_crane[0] = 0  #some sort of artefact from sci.label
 
@@ -112,9 +121,15 @@ def analyis(file):
     land_i = np.argmax(array_size)
     has_shore = array_size[land_i] > SHORE_TOLERANCE
 
+    if has_shore : #uniting all islands 
+        land_idxs = np.where(array_size > SHORE_TOLERANCE / 10 )[0]
+        features_img = copy.copy(labeled_array)
+        for l in land_idxs :
+            features_img[features_img == l] = land_i
+
     for i in range(1, num_features + 1):
         #  distance from all points of land
-        g4 = np.linalg.norm(array_location_mean[i].reshape((2, 1)) - np.where(labeled_array == land_i), axis=0)
+        g4 = np.linalg.norm(array_location_mean[i].reshape((2, 1)) - np.where(features_img == land_i), axis=0)
         if np.min(g4) < SHORE_DISTANCE_TOLERANCE and has_shore:  # 'islands' or water plants
             is_crane[i] = 0
 
@@ -208,11 +223,11 @@ def analyis(file):
         shore_dist = np.zeros(len(crane_location))
 
         for crane in range(len(crane_location)) :
-            g4 = np.linalg.norm(crane_location[crane].reshape((2, 1)) - np.where(labeled_array == land_i), axis=0)
+            g4 = np.linalg.norm(crane_location[crane].reshape((2, 1)) - np.where(features_img == land_i), axis=0)
 
             Shore_point = np.argmin(g4) #  closest point labelled land to crane_location[crane]
-            Shore_point_coor = np.array([np.where(labeled_array == land_i)[0][Shore_point], \
-                np.where(labeled_array == land_i)[1][Shore_point]]) 
+            Shore_point_coor = np.array([np.where(features_img == land_i)[0][Shore_point], \
+                np.where(features_img == land_i)[1][Shore_point]]) 
 
             crane_shore_dist = Shore_point_coor - crane_location[crane]
             # test if any of the neighbors are closer to the shore
@@ -264,4 +279,5 @@ def analyis(file):
     return avg_of_avgs*CM_TO_PXL, std_of_avgs*CM_TO_PXL, shore_history, water_tmp_median
 
 if __name__ == '__main__':
-  analyis('Rec-030321_agamon_flir_100m-349_23_26_13_659_7335.tif')
+  analyis('Rec-081121_agurim_100m-263_20_26_35_314_16260.tif')
+  analyis('Rec-081121_agurim_100m-263_20_26_35_314_16251.tif')
