@@ -21,7 +21,8 @@ def clustering (features, centroids):
 
 
 for dyr in os.listdir('Agurim'):
-    final_cols = ['filename', 'x', 'y', 'Cluster', 'cluster_size', 'Average_distance_to_neighbors', 'Average_distance_STD', 'Water_temperature']
+    final_cols = ['filename', 'x', 'y', 'Cluster', 'cluster_size', 'Average_distance_to_neighbors',\
+         'Average_distance_STD', 'Water_temperature']
 
     for f in os.listdir(os.path.join('Agurim', dyr)):
         date_table = pd.DataFrame(columns=final_cols) 
@@ -58,8 +59,10 @@ for dyr in os.listdir('Agurim'):
                     #     table_leg[table_leg[table_leg['Cluster']] == i] = md_clusters.iloc[i]['cluster_size']
 
                     table_leg['Average_distance_to_neighbors'], table_leg['Average_distance_STD'], table_leg['Water_temperature'], \
-                        table_leg['Air_temperature'], table_leg['wind_magnitude'] = None, None, None, \
-                            md_clusters.iloc[0]['air_temperature'], md_clusters.iloc[0]['wind_magnitude']
+                        table_leg['Air_temperature'], table_leg['wind_magnitude'], \
+                        table_leg['moon_lux_daily'], table_leg['moon_lux_real']    = None, None, None, \
+                            md_clusters.iloc[0]['air_temperature'], md_clusters.iloc[0]['wind_magnitude'], \
+                            md_clusters.iloc[0]['moon_lux_daily'], md_clusters.iloc[0]['moon_lux_real'] 
                     
                     
                     for (branch, sub_dirs, tif_files) in os.walk(path):

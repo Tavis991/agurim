@@ -29,17 +29,17 @@ SHORE_NEAREST_ANGLE = 35
 CM_TO_PXL = 6.91 
 
 THRESHOLDS = {'201220' : dict(), '030321': dict(), '081121': dict(), '131221': dict(), '231120': dict()}
-THRESHOLDS['201220']['thresh_tmp'] = 'f < b[1][0] + 0.8 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['201220']['thresh_tmp'] = ['f < b[1][0] + 0.8 * (b[1][np.argmax(b[0])] - b[1][0])']
 THRESHOLDS['201220']['CRANE_SIZE_THRESH'] = 16
-THRESHOLDS['030321']['thresh_tmp'] = 'f < b[1][0] + 0.82 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['030321']['thresh_tmp'] = ['f < b[1][0] + 0.82 * (b[1][np.argmax(b[0])] - b[1][0])']
 THRESHOLDS['030321']['CRANE_SIZE_THRESH'] = 8
-# THRESHOLDS['131221']['thresh_tmp'] = ['f > b[1][0] + 1.4 * (b[1][np.argmax(b[0])] - b[1][0])', \
-#     'f > b[1][0] + 1.1 * (b[1][np.argmax(b[0])] - b[1][0])'] 
-THRESHOLDS['131221']['CRANE_SIZE_THRESH'] = 5
-THRESHOLDS['081121']['thresh_tmp'] = ['f < b[1][0] + 0.60 * (b[1][np.argmax(b[0])] - b[1][0])', \
+THRESHOLDS['131221']['thresh_tmp'] = ['f > b[1][0] + 1.44 * (b[1][np.argmax(b[0])] - b[1][0])', \
+    'f > b[1][0] + 1.1 * (b[1][np.argmax(b[0])] - b[1][0])'] 
+THRESHOLDS['131221']['CRANE_SIZE_THRESH'] = 7
+THRESHOLDS['081121']['thresh_tmp'] = ['f < b[1][0] + 0.62 * (b[1][np.argmax(b[0])] - b[1][0])', \
     'f1 < b[1][0] + 0.72 * (b[1][np.argmax(b[0])] - b[1][0])']
 THRESHOLDS['081121']['CRANE_SIZE_THRESH'] = 7
-THRESHOLDS['231120']['thresh_tmp'] = 'f < b[1][0] + 0.66 * (b[1][np.argmax(b[0])] - b[1][0])'
+THRESHOLDS['231120']['thresh_tmp'] = ['f < b[1][0] + 0.66 * (b[1][np.argmax(b[0])] - b[1][0])']
 THRESHOLDS['231120']['CRANE_SIZE_THRESH'] = 9
 
 THRESHOLD = None
@@ -72,6 +72,21 @@ def analyis(file):
     # plt.show()
     bins = []
     for i in range (len(THRESHOLD['thresh_tmp'])):
+        if i == 1 :
+            f = (f*255).astype(np.uint8)
+            denoise = cv2.fastNlMeansDenoising(f,None,10,7,21)
+            f = cv2.equalizeHist(denoise)
+        #     gamma = 2
+        #     invGamma = 1/gamma
+        #     table = np.array([((i / 255.0) ** invGamma) * 255
+        #                     for i in np.arange(0, 256)]).astype("uint8")
+        #     f = cv2.LUT(f, table, f )
+            #blur = cv2.GaussianBlur(gamm,(3,3),0)
+            #f = cv2.GaussianBlur(src=f, ddepth=-1, kernel=kernel)
+            # kernel = np.array([[0, -1, 0],
+            #        [-1, 5,-1],
+            #        [0, -1, 0]])
+            # f = cv2.filter2D(src=f, ddepth=-1, kernel=kernel)
         bins.append(eval(THRESHOLD['thresh_tmp'][i]))
         plt.imsave(f'pic_binary_img{i}.bmp', bins[i], cmap='gray')
     bin_img = np.ones(e.shape)
@@ -120,19 +135,20 @@ def analyis(file):
     # find index of land
     land_i = np.argmax(array_size)
     has_shore = array_size[land_i] > SHORE_TOLERANCE
+    features_img = copy.copy(labeled_array)
+
 
     if has_shore : #uniting all islands 
         land_idxs = np.where(array_size > SHORE_TOLERANCE / 10 )[0]
-        features_img = copy.copy(labeled_array)
         for l in land_idxs :
             features_img[features_img == l] = land_i
+        plt.imsave('pic_labelled_features_after.bmp', features_img)
 
     for i in range(1, num_features + 1):
         #  distance from all points of land
         g4 = np.linalg.norm(array_location_mean[i].reshape((2, 1)) - np.where(features_img == land_i), axis=0)
         if np.min(g4) < SHORE_DISTANCE_TOLERANCE and has_shore:  # 'islands' or water plants
             is_crane[i] = 0
-
 
         if array_size[i] < THRESHOLD['CRANE_SIZE_THRESH'] or array_size[i] > THRESHOLD['CRANE_SIZE_THRESH'] * 10:  
             is_crane[i] = 0
@@ -148,11 +164,11 @@ def analyis(file):
     min_crane_dist = []
     crane_neighbor = []
 
-
     for cr in crane_location:  #KNN for K=1
         crane_dist = np.linalg.norm(crane_location - cr.reshape((1, 2)), axis=1)
-        min_temp = np.min(crane_dist[np.where(crane_dist > 0)])  # find closest neighbor
-        min_crane_dist.append(min_temp)  
+        if len(crane_location) > 1:
+            min_temp = np.min(crane_dist[np.where(crane_dist > 0)])  # find closest neighbor
+            min_crane_dist.append(min_temp)  
     min_temp = np.mean(min_crane_dist) #average of 1-NN is basis for our radius-NN
  
     for cr in crane_location:  #RADIUS-NN from average of 1-NN 
@@ -163,52 +179,52 @@ def analyis(file):
 
     neighbors = {str(crane) : ([],0) for crane in range(len(crane_location))}
 
-  
-    for crane in range(len(crane_location)) :
-        g99 = deepcopy(y1)
-        crane_dist = np.linalg.norm(crane_location - crane_location[crane].reshape((1, 2)), axis=1)
+    if len(crane_location) > 1 : 
+        for crane in range(len(crane_location)) :
+            g99 = deepcopy(y1)
+            crane_dist = np.linalg.norm(crane_location - crane_location[crane].reshape((1, 2)), axis=1)
 
-        crane_neig_loc = np.where((crane_dist < min_crane_dist[crane] * RADIUS_NN) & (crane_dist > 0))[0]
-        crane_neig_dist = crane_location[crane_neig_loc] - crane_location[crane]
-        crane_neig_dist_real = list(deepcopy(crane_neig_dist))
-        crane_neig_dist_real_tup = [tuple(val) for val in crane_neig_dist_real]
+            crane_neig_loc = np.where((crane_dist < min_crane_dist[crane] * RADIUS_NN) & (crane_dist > 0))[0]
+            crane_neig_dist = crane_location[crane_neig_loc] - crane_location[crane]
+            crane_neig_dist_real = list(deepcopy(crane_neig_dist))
+            crane_neig_dist_real_tup = [tuple(val) for val in crane_neig_dist_real]
 
-        # for i in crane_neig_loc :  #debugging print of radius-nearest neighbors 
-        #     g99[crane_location[i][0]][crane_location[i][1]] = [0, 0, 0]
-        
-        # g99[crane_location[crane][0]][crane_location[crane][1], :] = [255,0,0]
-        # plt.imsave('pic_radius_neighbors_first_iteration.bmp', g99, cmap='gray')       
+            # for i in crane_neig_loc :  #debugging print of radius-nearest neighbors 
+            #     g99[crane_location[i][0]][crane_location[i][1]] = [0, 0, 0]
+            
+            # g99[crane_location[crane][0]][crane_location[crane][1], :] = [255,0,0]
+            # plt.imsave('pic_radius_neighbors_first_iteration.bmp', g99, cmap='gray')       
 
 
-        for i in  range (len(crane_neig_dist)) :
-            for j in range (i + 1, len(crane_neig_dist)) :
+            for i in  range (len(crane_neig_dist)) :
+                for j in range (i + 1, len(crane_neig_dist)) :
 
-                a_nor = np.linalg.norm(crane_neig_dist[i])
-                b_nor = np.linalg.norm(crane_neig_dist[j])
-                ab_nor = np.linalg.norm(crane_neig_dist[i] - crane_neig_dist[j])
-                max_cr = crane_neig_dist[i] if (a_nor > b_nor) else crane_neig_dist[j] # farther crane to remove
-                deg = (180 / np.pi) * np.arccos(( - (ab_nor ** 2) + (a_nor ** 2) + (b_nor ** 2))
-                        / (a_nor * b_nor * 2 ))  #cosine therom
+                    a_nor = np.linalg.norm(crane_neig_dist[i])
+                    b_nor = np.linalg.norm(crane_neig_dist[j])
+                    ab_nor = np.linalg.norm(crane_neig_dist[i] - crane_neig_dist[j])
+                    max_cr = crane_neig_dist[i] if (a_nor > b_nor) else crane_neig_dist[j] # farther crane to remove
+                    deg = (180 / np.pi) * np.arccos(( - (ab_nor ** 2) + (a_nor ** 2) + (b_nor ** 2))
+                            / (a_nor * b_nor * 2 ))  #cosine therom
 
-                if deg < NEIGHBORS_ANGLE :  
-                    if ab_nor < NEAR_FACTOR :  
-                        pass
-                    elif tuple(max_cr) in crane_neig_dist_real_tup:
-                        crane_neig_dist_real_tup.remove(tuple(max_cr))
+                    if deg < NEIGHBORS_ANGLE :  
+                        if ab_nor < NEAR_FACTOR :  
+                            pass
+                        elif tuple(max_cr) in crane_neig_dist_real_tup:
+                            crane_neig_dist_real_tup.remove(tuple(max_cr))
 
-        crane_neig_dist_real = [list(val) for val in crane_neig_dist_real_tup] #python anti magic 
-        crane_neig_dist_real +=  crane_location[crane]
-        crane_neig_dist_real_tuple = [tuple(val) for val in crane_neig_dist_real]
-        crane_location_tuple = [tuple(val) for val in crane_location]
-        neighbors[str(crane)] = (crane_neig_dist_real, (np.linalg.norm(crane_neig_dist) / len(crane_neig_dist))) 
+            crane_neig_dist_real = [list(val) for val in crane_neig_dist_real_tup] #python anti magic 
+            crane_neig_dist_real +=  crane_location[crane]
+            crane_neig_dist_real_tuple = [tuple(val) for val in crane_neig_dist_real]
+            crane_location_tuple = [tuple(val) for val in crane_location]
+            neighbors[str(crane)] = (crane_neig_dist_real, (np.linalg.norm(crane_neig_dist) / len(crane_neig_dist))) 
 
-        # g99 = deepcopy(y1) #debugging print light of sight neighbors 
-        # s_list = [i for i in range (len(crane_location)) if (crane_location_tuple[i] in crane_neig_dist_real_tuple)]
-        # for i in s_list:
-        #     g99[crane_location[i][0]][crane_location[i][1]] = [0, 0, 0]
-        
-        # g99[crane_location[crane][0]][crane_location[crane][1], :] = [255,0,0]
-        # plt.imsave('pic_radius_neighbors_second_iteration.bmp', g99, cmap='gray')       
+            # g99 = deepcopy(y1) #debugging print light of sight neighbors 
+            # s_list = [i for i in range (len(crane_location)) if (crane_location_tuple[i] in crane_neig_dist_real_tuple)]
+            # for i in s_list:
+            #     g99[crane_location[i][0]][crane_location[i][1]] = [0, 0, 0]
+            
+            # g99[crane_location[crane][0]][crane_location[crane][1], :] = [255,0,0]
+            # plt.imsave('pic_radius_neighbors_second_iteration.bmp', g99, cmap='gray')       
 
     neighbor_distances = [neighbors[str(i)][NEIGH_DISTANCE] for i in range(len(neighbors))]
     avg_of_avgs = np.mean(neighbor_distances)
@@ -218,7 +234,7 @@ def analyis(file):
     shore_history = []
     shore_cranes_sus = dict()
     # g99 = deepcopy(y1)
-    if has_shore :
+    if has_shore and len(crane_location) > 1:
         close_to_shore = np.ones(len(crane_location), dtype=int)
         shore_dist = np.zeros(len(crane_location))
 
